@@ -7,6 +7,8 @@ import type { ThreadInspectorMode } from "./thread-inspector-navigation";
 import { useThreadHeaderOptions } from "./useThreadHeaderOptions";
 import { useWorkspaceBackNavigation } from "../workspace/useAndroidWorkspaceNavigation";
 import { PullRequestGlyph } from "../pull-requests/pullRequestGlyphs";
+import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
+import { useThreadLifecycleMenu } from "./useThreadLifecycleMenu";
 
 export function ThreadHeader(
   props: Parameters<typeof useThreadHeaderOptions>[0] & {
@@ -17,6 +19,8 @@ export function ThreadHeader(
     readonly onToggleInspector: () => void;
     readonly onOpenGitInspector: () => void;
     readonly onOpenFilesInspector: () => void;
+    /** Offers Settle and Snooze for this thread. Omitted while it is still being created. */
+    readonly lifecycleThread?: EnvironmentThreadShell | null;
   },
 ) {
   const goBack = useWorkspaceBackNavigation("threads");
@@ -24,6 +28,13 @@ export function ThreadHeader(
     useAdaptiveWorkspaceLayout();
   const { onOpenTerminal, onMergeBack } = props.gitControls;
   const native = useThreadHeaderOptions(props);
+  // Back to the list once the thread is put away; a split view already shows it.
+  const lifecycle = useThreadLifecycleMenu({
+    thread: props.lifecycleThread ?? null,
+    onDone: () => {
+      if (!layout.usesSplitView) goBack();
+    },
+  });
   const androidHeaderActions = useMemo<ReadonlyArray<AppBarAction>>(() => {
     const actions: AppBarAction[] = [];
     if (props.onReturnToThread) {
@@ -99,10 +110,12 @@ export function ThreadHeader(
         }
         onBack={layout.usesSplitView ? undefined : goBack}
         actions={androidHeaderActions}
+        menus={lifecycle.menu ? [lifecycle.menu] : undefined}
         hideBottomBorder
         compact={composerKeyboardActive}
       />
       {native.fallback}
+      {lifecycle.customSnoozeSheet}
     </>
   );
 }

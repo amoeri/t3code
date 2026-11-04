@@ -980,6 +980,7 @@ function ThreadRouteContent(
                 onOpenGitInspector={handleOpenGitInspector}
                 onOpenFilesInspector={handleOpenFilesInspector}
                 onReturnToThread={props.onReturnToThread}
+                lifecycleThread={creationState === null ? selectedThread : null}
               />
             )
           }
