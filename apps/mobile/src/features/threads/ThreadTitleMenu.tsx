@@ -19,7 +19,7 @@ import {
   threadTitleMenuOffers,
   threadTitleSnoozeUntil,
 } from "./thread-title-menu";
-import { leaveDeletedThread } from "./thread-title-delete-navigation";
+import { leaveDeletedThread, leavePutAwayThread } from "./thread-title-delete-navigation";
 import { ThreadTitleMenuTrigger } from "./ThreadTitleMenuTrigger";
 import { Platform, View } from "react-native";
 
@@ -29,6 +29,8 @@ export function ThreadTitleMenu(props: {
   readonly canMutate: boolean;
   readonly subtitle: string;
   readonly maxWidth: number;
+  /** The list is already on screen, so Settle and Snooze keep the thread open. */
+  readonly usesSplitView: boolean;
   /** Android only: one row with the subtitle after the title, matching AndroidScreenHeader. */
   readonly compact?: boolean;
 }) {
@@ -61,8 +63,15 @@ export function ThreadTitleMenu(props: {
   });
   const android = Platform.OS === "android";
   const inlineSubtitle = android && props.compact && props.subtitle !== "";
+  const androidReturnToList = android ? returnToList : undefined;
+  const leaveIfPutAway = (succeeded: boolean) =>
+    leavePutAwayThread(navigation, thread, {
+      succeeded,
+      usesSplitView: props.usesSplitView,
+      androidReturnToList,
+    });
   const snooze = (until: string) => {
-    void handlers.snoozeThread(thread, until);
+    void handlers.snoozeThread(thread, until).then(leaveIfPutAway);
   };
   return (
     <>
@@ -75,7 +84,7 @@ export function ThreadTitleMenu(props: {
           if (!threadTitleMenuOffers(actions, event)) return;
           switch (event) {
             case "settle":
-              void handlers.settleThread(thread);
+              void handlers.settleThread(thread).then(leaveIfPutAway);
               return;
             case "unsettle":
               void handlers.unsettleThread(thread);
@@ -97,7 +106,7 @@ export function ThreadTitleMenu(props: {
               return;
             case "delete":
               handlers.confirmDeleteThread(thread, () =>
-                leaveDeletedThread(navigation, thread, android ? returnToList : undefined),
+                leaveDeletedThread(navigation, thread, androidReturnToList),
               );
               return;
             case "copy-thread-id":

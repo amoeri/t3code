@@ -50,3 +50,20 @@ export function leaveDeletedThread(
   if (androidReturnToList) androidReturnToList();
   else resetAndroidWorkspace(navigation);
 }
+
+/**
+ * Settle and Snooze put the open thread away, so a successful one returns to the list, where
+ * the undo notice shows. A split view already shows the list and keeps the thread open.
+ */
+export function leavePutAwayThread(
+  navigation: Parameters<typeof leaveDeletedThread>[0],
+  thread: Pick<EnvironmentThreadShell, "environmentId" | "id">,
+  input: {
+    readonly succeeded: boolean;
+    readonly usesSplitView: boolean;
+    readonly androidReturnToList?: () => void;
+  },
+) {
+  if (!input.succeeded || input.usesSplitView) return;
+  leaveDeletedThread(navigation, thread, input.androidReturnToList);
+}

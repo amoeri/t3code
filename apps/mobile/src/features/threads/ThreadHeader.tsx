@@ -94,6 +94,7 @@ export function ThreadHeader(
       canMutate={props.canMutateThread}
       subtitle={titleSubtitle}
       maxWidth={native.titleMaxWidth}
+      usesSplitView={layout.usesSplitView}
       compact={composerKeyboardActive}
     />
   ) : undefined;

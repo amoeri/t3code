@@ -3,7 +3,11 @@ import { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import type { RootStackResetAction } from "../../lib/root-stack-reset";
-import { leaveDeletedThread, threadRouteStillShows } from "./thread-title-delete-navigation";
+import {
+  leaveDeletedThread,
+  leavePutAwayThread,
+  threadRouteStillShows,
+} from "./thread-title-delete-navigation";
 
 const require = NodeModule.createRequire(import.meta.url);
 const requireFromNative = NodeModule.createRequire(
@@ -102,6 +106,27 @@ function deleteFromFocusedRoute(initial: StackState) {
   return state;
 }
 
+function putAwayFromFocusedRoute(
+  initial: StackState,
+  input: { readonly succeeded: boolean; readonly usesSplitView: boolean },
+) {
+  let state = initial;
+  const focusedKey = state.routes[state.index]?.key;
+  leavePutAwayThread(
+    {
+      isFocused: () => state.routes[state.index]?.key === focusedKey,
+      getState: () => state,
+      getParent: () => undefined,
+      dispatch: (action: RootStackResetAction) => {
+        state = apply(state, action);
+      },
+    },
+    deleted,
+    input,
+  );
+  return state;
+}
+
 function names(state: StackState) {
   return state.routes.map((route) => route.name);
 }
@@ -141,5 +166,38 @@ describe("leaveDeletedThread", () => {
       const initial = stack({ name: "Home" }, { name: "Thread", params });
       expect(deleteFromFocusedRoute(initial)).toBe(initial);
     }
+  });
+});
+
+describe("leavePutAwayThread", () => {
+  const open = () => stack({ name: "Home" }, { name: "Thread", params: threadA });
+
+  it("returns to the list after a successful Settle or Snooze", () => {
+    const state = putAwayFromFocusedRoute(open(), { succeeded: true, usesSplitView: false });
+    expect(names(state)).toEqual(["Home"]);
+  });
+
+  it("keeps the thread open when the action failed", () => {
+    const initial = open();
+    expect(putAwayFromFocusedRoute(initial, { succeeded: false, usesSplitView: false })).toBe(
+      initial,
+    );
+  });
+
+  it("keeps the thread open in a split view, where the list is on screen", () => {
+    const initial = open();
+    expect(putAwayFromFocusedRoute(initial, { succeeded: true, usesSplitView: true })).toBe(
+      initial,
+    );
+  });
+
+  it("keeps a newer selection made while the action was in flight", () => {
+    const initial = stack(
+      { name: "Home" },
+      { name: "Thread", params: { environmentId: "env-a", threadId: "thread-b" } },
+    );
+    expect(putAwayFromFocusedRoute(initial, { succeeded: true, usesSplitView: false })).toBe(
+      initial,
+    );
   });
 });
